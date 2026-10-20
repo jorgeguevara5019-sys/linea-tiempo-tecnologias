@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Línea de Tiempo de las Tecnologías de la Información</title>
+<meta name="description" content="Línea de tiempo interactiva de los principales avances de las Tecnologías de la Información, desde el ábaco hasta la inteligencia artificial generativa.">
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --border: #30363d;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --line: #30363d;
+    --c1: #f2cc60;  /* Antigüedad / mecánica */
+    --c2: #ff7b72;  /* Electromecánica */
+    --c3: #79c0ff;  /* Computadoras */
+    --c4: #7ee787;  /* Redes / Internet */
+    --c5: #d2a8ff;  /* Móvil / IA */
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Segoe UI", system-ui, -apple-system, Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.55;
+  }
+  header {
+    text-align: center;
+    padding: 64px 16px 32px;
+    background: radial-gradient(ellipse at top, #1f2a44 0%, var(--bg) 70%);
+  }
+  header h1 {
+    font-size: clamp(1.7rem, 4.5vw, 2.8rem);
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+  }
+  header p {
+    color: var(--muted);
+    max-width: 640px;
+    margin: 14px auto 0;
+    font-size: 1.05rem;
+  }
+  .filters {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    padding: 8px 16px 24px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: rgba(13,17,23,0.92);
+    backdrop-filter: blur(6px);
+    border-bottom: 1px solid var(--border);
+  }
+  .filters button {
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 7px 14px;
+    font: inherit;
+    font-size: 0.88rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    transition: border-color .2s, background .2s;
+    margin-top: 16px;
+  }
+  .filters button .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .filters button.active { border-color: var(--text); background: #21262d; }
+  .filters button:hover { border-color: var(--muted); }
+
+  .timeline {
+    position: relative;
+    max-width: 1040px;
+    margin: 40px auto 60px;
+    padding: 0;
+  }
+  .timeline::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 0; bottom: 0;
+    width: 3px;
+    background: linear-gradient(var(--c1), var(--c2), var(--c3), var(--c4), var(--c5));
+    transform: translateX(-50%);
+    border-radius: 3px;
+  }
+  .event {
+    position: relative;
+    width: 50%;
+    padding: 0 40px 36px;
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity .6s ease, transform .6s ease;
+  }
+  .event.visible { opacity: 1; transform: none; }
+  .event.hidden { display: none; }
+  .event:nth-child(odd)  { left: 0; text-align: right; }
+  .event:nth-child(even) { left: 50%; }
+  .event::after {
+    content: "";
+    position: absolute;
+    top: 22px;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: var(--bg);
+    border: 4px solid var(--accent);
+    z-index: 2;
+  }
+  .event:nth-child(odd)::after  { right: -9px; }
+  .event:nth-child(even)::after { left: -9px; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-top: 3px solid var(--accent);
+    border-radius: 12px;
+    padding: 18px 20px;
+    cursor: pointer;
+    transition: transform .2s, box-shadow .2s;
+    text-align: left;
+  }
+  .card:hover { transform: translateY(-3px); box-shadow: 0 10px 28px rgba(0,0,0,.45); }
+  .year {
+    font-weight: 800;
+    font-size: 1.5rem;
+    color: var(--accent);
+    letter-spacing: -0.01em;
+  }
+  .icon { font-size: 1.6rem; float: right; margin-left: 10px; }
+  .card h3 { font-size: 1.12rem; margin: 2px 0 6px; }
+  .card p { color: var(--muted); font-size: 0.95rem; }
+  .tag {
+    display: inline-block;
+    margin-top: 10px;
+    font-size: 0.75rem;
+    padding: 2px 9px;
+    border-radius: 999px;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+  }
+  .more {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height .35s ease;
+  }
+  .card.open .more { max-height: 260px; }
+  .more p {
+    color: var(--text);
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed var(--border);
+    font-size: 0.92rem;
+  }
+  .hint { font-size: 0.78rem; color: var(--muted); margin-top: 8px; }
+  .card.open .hint { display: none; }
+
+  footer {
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.85rem;
+    padding: 28px 16px 48px;
+    border-top: 1px solid var(--border);
+  }
+  footer strong { color: var(--text); }
+
+  @media (max-width: 760px) {
+    .timeline { padding: 0 16px; }
+    .timeline::before { left: 40px; }
+    .event, .event:nth-child(even), .event:nth-child(odd) {
+      width: 100%;
+      left: 0;
+      padding: 0 0 28px 56px;
+      text-align: left;
+    }
+    .event:nth-child(odd)::after, .event:nth-child(even)::after { left: 15px; right: auto; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Línea de Tiempo de las<br>Tecnologías de la Información</h1>
+  <p>Del ábaco a la inteligencia artificial: los avances que cambiaron la forma en que la humanidad calcula, almacena y comunica información. Haz clic en cada tarjeta para ver por qué fue importante.</p>
+</header>
+
+<nav class="filters" id="filters">
+  <button class="active" data-era="todas"><span class="dot" style="background:linear-gradient(90deg,var(--c1),var(--c5))"></span>Todas</button>
+  <button data-era="mecanica"><span class="dot" style="background:var(--c1)"></span>Era mecánica</button>
+  <button data-era="electromecanica"><span class="dot" style="background:var(--c2)"></span>Era electromecánica</button>
+  <button data-era="computo"><span class="dot" style="background:var(--c3)"></span>Era de la computación</button>
+  <button data-era="internet"><span class="dot" style="background:var(--c4)"></span>Era de Internet</button>
+  <button data-era="movil"><span class="dot" style="background:var(--c5)"></span>Era móvil e IA</button>
+</nav>
+
+<main class="timeline" id="timeline"></main>
+
+<footer>
+  <p><strong>Actividad de Clase 2 · Tecnologías de la Información</strong></p>
+  <p>Elaborado por Jorge Guevara · Ingeniería en Negocios · CU Tlaquepaque, Universidad de Guadalajara · Octubre 2026</p>
+</footer>
+
+<script>
+const ERAS = {
+  mecanica:        { color: "var(--c1)", name: "Era mecánica" },
+  electromecanica: { color: "var(--c2)", name: "Era electromecánica" },
+  computo:         { color: "var(--c3)", name: "Era de la computación" },
+  internet:        { color: "var(--c4)", name: "Era de Internet" },
+  movil:           { color: "var(--c5)", name: "Era móvil e IA" }
+};
+
+const EVENTS = [
+  { year: "c. 2500 a.C.", era: "mecanica", icon: "🧮", title: "El ábaco",
+    text: "En Mesopotamia surge el ábaco, el primer instrumento conocido para hacer cálculos.",
+    more: "Fue la herramienta de cálculo dominante durante miles de años y sigue usándose hoy en algunas partes de Asia. Introdujo la idea de representar números con posiciones." },
+  { year: "c. 1450", era: "mecanica", icon: "📜", title: "La imprenta de Gutenberg",
+    text: "Johannes Gutenberg desarrolla la imprenta de tipos móviles en Europa.",
+    more: "Permitió copiar información de forma masiva y barata. Es considerada la primera gran revolución en la difusión de la información." },
+  { year: "1642", era: "mecanica", icon: "⚙️", title: "La Pascalina",
+    text: "Blaise Pascal construye una calculadora mecánica capaz de sumar y restar.",
+    more: "Fue una de las primeras máquinas que automatizaba operaciones aritméticas mediante engranajes. Más tarde Leibniz la mejoró para multiplicar y dividir." },
+  { year: "1801", era: "mecanica", icon: "🧵", title: "Telar de Jacquard",
+    text: "Joseph Marie Jacquard usa tarjetas perforadas para controlar los patrones de un telar.",
+    more: "Fue la primera vez que una máquina se 'programó' con instrucciones almacenadas en tarjetas. Esta idea inspiró a Babbage y, después, a las primeras computadoras." },
+  { year: "1837", era: "mecanica", icon: "🏛️", title: "Máquina Analítica de Babbage",
+    text: "Charles Babbage diseña la Máquina Analítica; Ada Lovelace escribe el primer algoritmo para ella.",
+    more: "Tenía memoria, unidad de cálculo y entrada por tarjetas: los componentes de una computadora moderna. Por eso Babbage es llamado 'padre de la computación' y Ada Lovelace la primera programadora." },
+  { year: "1844", era: "electromecanica", icon: "📡", title: "El telégrafo",
+    text: "Samuel Morse envía el primer mensaje telegráfico a larga distancia usando el código Morse.",
+    more: "Por primera vez la información viajó más rápido que una persona o un caballo. Fue el inicio de las telecomunicaciones eléctricas." },
+  { year: "1876", era: "electromecanica", icon: "☎️", title: "El teléfono",
+    text: "Alexander Graham Bell patenta el teléfono, que transmite la voz por cables eléctricos.",
+    more: "Transformó la comunicación personal y de negocios. Las redes telefónicas fueron después la base sobre la que se conectó Internet." },
+  { year: "1890", era: "electromecanica", icon: "🗂️", title: "Tabuladora de Hollerith",
+    text: "Herman Hollerith procesa el censo de EE. UU. con una máquina de tarjetas perforadas.",
+    more: "Redujo el procesamiento del censo de años a meses. Su empresa terminó formando parte de IBM, una de las compañías clave de la historia de la computación." },
+  { year: "1936", era: "electromecanica", icon: "🧠", title: "La Máquina de Turing",
+    text: "Alan Turing describe un modelo teórico de máquina capaz de ejecutar cualquier algoritmo.",
+    more: "Sentó las bases teóricas de la computación: qué se puede calcular y cómo. Turing también es considerado pionero de la inteligencia artificial." },
+  { year: "1946", era: "computo", icon: "💡", title: "ENIAC",
+    text: "Se presenta la ENIAC, una de las primeras computadoras electrónicas de propósito general.",
+    more: "Usaba cerca de 18,000 tubos de vacío, ocupaba una habitación entera y pesaba alrededor de 27 toneladas. Marcó el inicio de la primera generación de computadoras." },
+  { year: "1947", era: "computo", icon: "🔌", title: "El transistor",
+    text: "En los Laboratorios Bell inventan el transistor, que reemplaza a los tubos de vacío.",
+    more: "Hizo posibles computadoras más pequeñas, baratas, rápidas y confiables. Es el componente básico de toda la electrónica moderna (segunda generación)." },
+  { year: "1958", era: "computo", icon: "🔲", title: "El circuito integrado",
+    text: "Jack Kilby y Robert Noyce desarrollan el circuito integrado (chip).",
+    more: "Permitió colocar muchos transistores en una sola pieza de silicio. Dio paso a la tercera generación de computadoras." },
+  { year: "1969", era: "internet", icon: "🌐", title: "ARPANET",
+    text: "Se envía el primer mensaje entre computadoras de ARPANET, la red precursora de Internet.",
+    more: "Conectó universidades y centros de investigación en EE. UU. Introdujo la conmutación de paquetes, principio fundamental de Internet." },
+  { year: "1971", era: "computo", icon: "🧩", title: "El microprocesador",
+    text: "Intel lanza el 4004, el primer microprocesador comercial.",
+    more: "Integró toda la unidad central de procesamiento en un solo chip. Esto hizo posible la computadora personal (cuarta generación). En ese mismo año se envió el primer correo electrónico." },
+  { year: "1981", era: "computo", icon: "🖥️", title: "La computadora personal (IBM PC)",
+    text: "IBM lanza su PC; poco después Apple presenta la Macintosh (1984) con interfaz gráfica.",
+    more: "La computación llegó a oficinas y hogares. Microsoft, con MS-DOS y luego Windows (1985), se volvió el sistema operativo dominante." },
+  { year: "1983", era: "internet", icon: "🔗", title: "Nace el protocolo TCP/IP",
+    text: "ARPANET adopta TCP/IP, el conjunto de protocolos que todavía usa Internet.",
+    more: "Estandarizó cómo se comunican redes distintas entre sí. Por eso muchos consideran 1983 como el 'nacimiento' oficial de Internet." },
+  { year: "1991", era: "internet", icon: "🕸️", title: "World Wide Web",
+    text: "Tim Berners-Lee publica la primera página web usando HTML, HTTP y URLs.",
+    more: "Hizo que Internet fuera fácil de usar para cualquier persona mediante páginas enlazadas. Es la base de sitios, tiendas en línea y aplicaciones web." },
+  { year: "1998", era: "internet", icon: "🔍", title: "Google",
+    text: "Larry Page y Sergey Brin fundan Google, con un buscador basado en la relevancia de los enlaces.",
+    more: "Organizó la enorme cantidad de información de la web y la hizo accesible. También creó un nuevo modelo de negocio basado en publicidad digital." },
+  { year: "2004", era: "internet", icon: "👥", title: "Redes sociales y Web 2.0",
+    text: "Se lanza Facebook; le siguen YouTube (2005) y Twitter (2006).",
+    more: "Los usuarios pasaron de solo consumir contenido a crearlo y compartirlo. Cambió el marketing, la comunicación y la forma de hacer negocios." },
+  { year: "2006", era: "internet", icon: "☁️", title: "Computación en la nube",
+    text: "Amazon Web Services lanza servicios de almacenamiento y servidores bajo demanda.",
+    more: "Las empresas pueden rentar capacidad de cómputo en lugar de comprar servidores propios. Facilitó el surgimiento de startups y de servicios como Netflix o Spotify." },
+  { year: "2007", era: "movil", icon: "📱", title: "El smartphone",
+    text: "Apple presenta el iPhone; en 2008 llega Android y las tiendas de aplicaciones.",
+    more: "Puso una computadora conectada a Internet en el bolsillo de millones de personas. Impulsó el comercio móvil, las apps y la economía digital." },
+  { year: "2009", era: "movil", icon: "⛓️", title: "Blockchain y Bitcoin",
+    text: "Se lanza Bitcoin, la primera criptomoneda basada en la tecnología blockchain.",
+    more: "Introdujo un registro de transacciones descentralizado y difícil de alterar. Su tecnología se estudia hoy para finanzas, logística y contratos inteligentes." },
+  { year: "2010s", era: "movil", icon: "📊", title: "Big Data e Internet de las Cosas",
+    text: "Sensores, dispositivos y plataformas generan enormes volúmenes de datos conectados.",
+    more: "Las empresas analizan datos para tomar decisiones, predecir demanda y personalizar productos. Relojes, autos y electrodomésticos se conectan a Internet." },
+  { year: "2016", era: "movil", icon: "🤖", title: "Auge del aprendizaje profundo",
+    text: "AlphaGo vence al campeón mundial de Go, mostrando el poder del deep learning.",
+    more: "Las redes neuronales lograron avances en reconocimiento de voz, imágenes y traducción. Prepararon el camino para la IA generativa." },
+  { year: "2019", era: "movil", icon: "📶", title: "Redes 5G",
+    text: "Comienza el despliegue comercial de la quinta generación de telefonía móvil.",
+    more: "Ofrece mayor velocidad y menor latencia, clave para el Internet de las Cosas, vehículos conectados y ciudades inteligentes." },
+  { year: "2022", era: "movil", icon: "✨", title: "Inteligencia artificial generativa",
+    text: "Se popularizan los asistentes de IA capaces de generar texto, imágenes y código.",
+    more: "Herramientas como ChatGPT, Claude y Gemini cambiaron la forma de estudiar, programar y trabajar. Hoy se integran en empresas para automatizar tareas y apoyar la toma de decisiones." }
+];
+
+const tl = document.getElementById("timeline");
+
+EVENTS.forEach(e => {
+  const div = document.createElement("div");
+  div.className = "event";
+  div.dataset.era = e.era;
+  div.style.setProperty("--accent", ERAS[e.era].color);
+  div.innerHTML = `
+    <article class="card" tabindex="0" role="button" aria-expanded="false">
+      <span class="icon" aria-hidden="true">${e.icon}</span>
+      <div class="year">${e.year}</div>
+      <h3>${e.title}</h3>
+      <p>${e.text}</p>
+      <div class="more"><p>${e.more}</p></div>
+      <div class="hint">Clic para ver más ▾</div>
+      <span class="tag">${ERAS[e.era].name}</span>
+    </article>`;
+  tl.appendChild(div);
+});
+
+// Abrir / cerrar tarjetas
+tl.addEventListener("click", ev => {
+  const card = ev.target.closest(".card");
+  if (!card) return;
+  card.classList.toggle("open");
+  card.setAttribute("aria-expanded", card.classList.contains("open"));
+});
+tl.addEventListener("keydown", ev => {
+  if ((ev.key === "Enter" || ev.key === " ") && ev.target.classList.contains("card")) {
+    ev.preventDefault(); ev.target.click();
+  }
+});
+
+// Animación al hacer scroll
+const io = new IntersectionObserver(entries => {
+  entries.forEach(en => { if (en.isIntersecting) en.target.classList.add("visible"); });
+}, { threshold: 0.15 });
+document.querySelectorAll(".event").forEach(el => io.observe(el));
+
+// Filtros por era
+document.getElementById("filters").addEventListener("click", ev => {
+  const btn = ev.target.closest("button");
+  if (!btn) return;
+  document.querySelectorAll(".filters button").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+  const era = btn.dataset.era;
+  document.querySelectorAll(".event").forEach(el => {
+    el.classList.toggle("hidden", era !== "todas" && el.dataset.era !== era);
+    el.classList.add("visible");
+  });
+});
+</script>
+</body>
+</html>
